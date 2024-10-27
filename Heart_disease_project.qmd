@@ -1,0 +1,1304 @@
+---
+title: "Exploring Vital Health Factors in Heart Disease Risk Assessment"
+author: "Bhavani Priya"
+format: 
+  html: 
+    embed-resources: true
+    self-contained-math: true
+---
+
+## Description
+
+The Heart Disease UCI dataset comprises 303 observations and 14 attributes (including the target variable). Each observation represents a patient, and the attributes provide information about the patient's demographic, clinical, and diagnostic features.
+
+Understanding the role of age and key health factors, such as cholesterol levels, blood sugar levels, and resting blood pressure, in influencing the risk of heart disease is crucial for effective prevention and management strategies.
+
+## Research Question
+
+To what extent do age, gender and key health factors, such as cholesterol levels, blood sugar levels, and resting blood pressure, individually contribute to the risk of heart disease?
+
+Does gender, age and the maximum heart rate achieved play a significant role in the occurrence of heart disease?
+
+**Literature Review:**
+
+Heart disease is a leading cause of morbidity and mortality worldwide, with age and health factors playing pivotal roles in its development and progression. Advancing age is a non-modifiable risk factor associated with increased susceptibility to cardiovascular events (D'Agostino et al., 2008; Lloyd-Jones et al., 2006). Additionally, health factors such as elevated cholesterol levels, high blood pressure, diabetes, obesity, physical inactivity, and smoking are implicated in heart disease pathogenesis (Yusuf et al., 2004). Gender disparities in heart disease prevalence, presentation, and outcomes have been documented, highlighting the need for gender-sensitive approaches to risk assessment and diagnosis (Hemingway & Marmot, 1999). Interestingly, maximum heart rate achieved during exercise has emerged as a physiological factor influencing heart disease risk, with gender-specific associations observed (Gupta et al., 2020). Understanding the complex interplay between these factors is essential for advancing heart disease research and improving preventive and therapeutic interventions.
+
+## Hypothesis
+
+**Hypothesis for Research Question 1:**
+
+Higher blood sugar levels increase the risk of heart disease, while controlling for age and gender.
+
+Elevated cholesterol levels significantly impact the risk of heart disease, while controlling for age and gender.
+
+Elevated blood pressure levels have a significant effect on the risk of heart disease, while controlling for age and gender.
+
+**Hypothesis for Research Question 2:**
+
+Maximum heart rate achieved during exercise have significant association with the occurrence of heart disease, while controlling for age and gender
+
+## Descriptive Statistics:
+
+**Attributes**:
+
+-   Age: The age of the patient in years.
+-   Sex: The gender of the patient (1 = male; 0 = female).
+-   Chest Pain Type (CP): The type of chest pain experienced by the patient (1 = atypical angina, 2 = non-anginal pain, 3 = asymptomatic).
+-   Resting Blood Pressure (Trestbps): The resting blood pressure of the patient in mm Hg.
+-   Cholesterol (Chol): The serum cholesterol level of the patient in mg/dl.
+-   Fasting Blood Sugar (Fbs): The fasting blood sugar level of the patient (\>120 mg/dl signifies high blood sugar).
+-   Resting Electrocardiographic Results (Restecg): The resting electrocardiographic results of the patient (0 = normal, 1 = having ST-T wave abnormality, 2 = showing probable or definite left ventricular hypertrophy).
+-   Maximum Heart Rate Achieved (Thalach): The maximum heart rate achieved by the patient during exercise.
+-   Exercise-Induced Angina (Exang):Whether the patient experienced exercise-induced angina (1 = yes; 0 = no).
+-   ST Depression Induced by Exercise Relative to Rest (Oldpeak): The ST depression induced by exercise relative to rest.
+-   Slope of the Peak Exercise ST Segment (Slope): The slope of the peak exercise ST segment
+-   Number of Major Vessels (ca): The number of major vessels (0-3) colored by fluoroscopy.
+-   Thalassemia (Thal):A categorical variable indicating thalassemia type (1 = one gene deletion; 2 = two gene deletion; 3 = three gene deletion).
+-   Target (Heart Disease): The presence of heart disease in the patient (0 = no heart disease; 1 = heart disease present).
+
+**Libraries**
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(naniar)
+library(ggplot2)
+library(summarytools)
+library(psych)
+library(reshape2)
+library(stargazer)
+library(gridExtra)
+library(car)
+library(broom)
+library(tidyr)
+```
+
+**Loading Dataset**
+
+```{r, echo=FALSE, warning=FALSE}
+#| echo: false
+heart_data <- read.csv('heart.csv')
+
+print(dim(heart_data))
+```
+
+```{r, echo=FALSE, warning=FALSE}
+#checking the first 6 rows
+head(heart_data)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+#summary of data before factorising
+
+describe(heart_data)
+```
+
+**Check for missing value**
+
+```{r, echo=FALSE, warning=FALSE}
+#plotting any missing values
+gg_miss_var(heart_data)
+```
+
+### Factoring Columns:
+
+```{r, echo=FALSE, warning=FALSE}
+#Factoring columns
+heart_data_new <- heart_data |>
+  mutate(
+    sex = factor(sex,levels=c(0,1),labels= c("Female","Male")),
+    target = factor(target,levels=c(0,1),labels=c("No","Yes")),
+    fbs = factor(fbs,levels=c(0,1),labels=c("<=120mg/dL",">120mg/dL")),
+    cp = factor(cp,levels=c(0,1,2,3),labels=c("Typical Angina","Atypical Angina","Non-anginal pain","Asymptomatic")),
+    restecg = factor(restecg, levels=c(0,1,2),labels =c("Normal","Abnormality","Probable or Definite")),
+    exang = factor(exang,levels=c(0,1),labels=c("No","Yes")),
+    slope = as.factor(slope),
+    ca = as.factor(ca),
+    thal = factor(thal, levels=c(1,2,3),labels=c("One gene deletion","Two gene deletion","Three gene deletion"))
+  )
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+#renaming columns for better understanding
+heart_data_new <- heart_data_new |>
+  rename(
+    heart_disease = target,
+    resting_BP = trestbps,
+    fasting_blood_sugar = fbs,
+    chest_paintype = cp,
+    max_heart_rate = thalach,
+    cholestrol = chol,
+    exercise_induced_angina = exang,
+    major_vessels = ca,
+    thalassamia = thal
+  )
+```
+
+**Summary of New data**
+
+```{r results='asis'}
+#summary of new data
+
+setwd("C:/Users/priya/OneDrive/Documents/DACSS_603/Dacss_603")
+
+dfSummary(heart_data_new, plain.ascii = FALSE,
+          style = "grid",
+          graph.magnif = 0.85,
+          varnumbers = FALSE,
+          valid.col    = FALSE,
+          tmp.img.dir = './tmp')
+```
+
+### Visualization
+
+**Let's check the distribution of interested variables**
+
+**Age Distribution**
+
+-   This histogram showcases the distribution of patients' ages within the dataset, indicating how many individuals fall into each age range.
+-   The distribution appears bimodal, with peaks around the mid-50s and early 60s, suggesting these are the most common ages among the patients studied.
+
+```{r, echo=FALSE, warning=FALSE}
+#Histogram of age
+# Age distribution
+ggplot(heart_data_new, aes(x=age)) + 
+  geom_histogram(binwidth=1, fill="skyblue", color="black") +
+  labs(title="Age Distribution")
+
+
+ggsave("age_distribution.png", device="png", width=8, height=8, units="in",dpi=300)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+#creating new column for age groups
+heart_data_new <- heart_data_new %>%
+  mutate(age_group = cut(age, breaks = c(0, 20, 35, 45, 65, 95), labels = c("0-20", "21-35", "36-45", "46-65", "66-95"), include.lowest = TRUE))
+
+```
+
+**Distribution of Age Groups**
+
+-   This bar chart breaks down the dataset into discrete age groups, providing a clearer view of the age composition of the patient population.
+-   The vast majority of patients are in the 46-65 age group, indicating a higher prevalence of patients within this middle-age bracket.
+
+```{r, echo=FALSE, warning=FALSE}
+# Age group distribution
+ggplot(heart_data_new, aes(x=age_group)) + 
+  geom_bar(fill="skyblue", color="black") +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +
+  labs(title="Distribution of Age Groups") +
+  xlab("Age Groups") +
+  ylab("Frequency")
+```
+
+**Distribution of Male and Female**
+
+-   The bar chart displays the gender distribution within the dataset, comparing the number of male and female patients.
+-   Males significantly outnumber females, which could be indicative of either a higher prevalence of heart disease or a sample bias in the collected data.
+
+```{r, echo=FALSE, warning=FALSE}
+# Sex distribution
+ggplot(heart_data_new, aes(x=heart_data_new$sex)) + 
+  geom_bar(fill="skyblue", color="black") +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5) +
+  xlab("Gender") +
+  ylab("Count") +
+  labs(title="Distribution of Male and Female") 
+```
+
+**Analysis of Presence and Absence of Heart Disease**
+
+-   This bar chart compares the number of patients with and without heart disease, illustrating the prevalence of the condition within the study population.
+-   The patients with heart disease slightly outnumber those without, indicating that the dataset may be focused on a high-risk population.
+
+```{r, echo=FALSE, warning=FALSE}
+# Bar plot for target (Heart disease) 
+ggplot(heart_data_new, aes(x=heart_data_new$heart_disease, fill=heart_data_new$heart_disease)) + 
+  geom_bar() +
+  xlab("Heart Disease") +
+  ylab("Count") +
+  ggtitle("Analysis of Presence and Absence of Heart Disease") +
+  scale_fill_discrete(name = "Heart Disease", labels = c("Absence", "Presence"))
+ggsave("heart_disease.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+**Cholesterol Levels across Age by Gender**
+
+-   This scatter plot presents the relationship between patients' age and cholesterol levels, separated by gender.
+-   While there is a wide range of cholesterol levels across all ages, there's no clear trend indicating an increase or decrease with age, and both genders show considerable overlap in cholesterol levels.
+
+```{r, echo=FALSE, warning=FALSE}
+#cholestrol levels by age and sex
+heart_data_new |>
+  ggplot(aes(x=age, y=cholestrol, color=sex)) +
+  geom_point(alpha=0.7) +
+  facet_wrap(~ sex) +
+  xlab("Age") +
+  ylab("Cholesterol(mg/dL)") +
+  guides(fill = guide_legend(title = "Gender")) +
+  ggtitle("Cholestrol levels across Age by Gender")
+
+ggsave("cholestrol.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+**Relationship between Age & Heart Disease**
+
+-   The density plot overlays the age distribution of patients with and without heart disease, allowing for a comparison between the two groups.
+-   The distribution suggests that occurence of heart disease is almost equally distributed in all ages seeing a peak in age 50-60 and then declining. On the other hand, it is interesting to see most number of people of the ages 55-70 does not have heart disease.
+
+```{r, echo=FALSE, warning=FALSE}
+# Relationship between age & heart disease
+heart_data_new |>
+ggplot(aes(x=age, fill=heart_disease)) +
+  geom_density(alpha=0.5) +
+  labs(title="Relationship between Age & Heart Disease", x="Age", y="Density")
+
+ggsave("age_heart.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+**Resting Blood Pressure by Heart Disease Status and Sex**
+
+-   This box plot illustrates the distribution of resting blood pressure among patients, categorized by their heart disease status and gender.
+-   Both males and females show a similar range of blood pressure values, but there appears to be a slight increase in blood pressure among female patients with no heart disease.
+
+```{r, echo=FALSE, warning=FALSE}
+# Comparison of Blood pressure across gender 
+heart_data_new |>
+  ggplot(aes(x=sex,y=resting_BP, fill=sex))+
+  geom_boxplot()+
+  labs(title="Relationship between Sex & Resting Blood Pressure", x="Sex", y="Resting BP") +
+  facet_grid(~heart_disease)
+
+ggsave("sex_BP.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+**Relationship between Sex & Max Heart Rate**
+
+-   The box plot compares the maximum heart rate achieved during exercise between males and females and further distinguishes between patients with and without heart disease.
+-   Males tend to have a higher maximum heart rate across both categories (presence and absence of heart disease), and in patients with heart disease, the maximum heart rate for both genders is higher when compared with patients with no heart disease.
+
+```{r, echo=FALSE, warning=FALSE}
+
+#box plot for sex and max heart rate during exercise
+heart_data_new |>
+ggplot(aes(x=sex, y=max_heart_rate, fill=sex)) +
+  geom_boxplot() +
+  labs(title="Relationship between Sex & Max Heart Rate", x="Sex", y="Max Heart Rate")+
+  facet_grid(~heart_disease)
+
+ggsave("sex_HR.png", device="png", width=8, height=8, units="in",dpi=300)
+
+
+```
+
+## Hypothesis Testing
+
+-   The response variable is - heart_disease(target)
+-   The explanatory variables are - (resting_bp(trestbps), cholestrol(chol), fasting_blood_sugar(fbs)), max_heart_rate(thalach)
+-   Control variables - age, gender
+
+### Correlation Plot
+
+-   Plotted correlation plot to analyze the strength of association between various predictor or explanatory variables and response variable(target). Tiles with darker green colour show stronger correlation or association and vice versa.
+-   The matrix is used to identify multicollinearity by examining the strength of correlations between predictor variables. When variables are highly correlated (typically indicated by correlation coefficients close to 1 or -1), it suggests multicollinearity. In this matrix we can see there is no multicollineartity
+
+```{r, echo=FALSE, warning=FALSE}
+round(cor(heart_data), 2) %>%
+  melt() %>% 
+  ggplot(aes(x=Var1, y=Var2, fill=abs(value))) +
+  geom_tile()+
+  scale_fill_continuous(type="gradient", low = "brown1", high = "brown4", breaks = c(0,1,0.025)) +
+  geom_text(aes(Var2, Var1, label = value), color = "white", size = 4) + 
+  labs(x = NULL, y = NULL) + 
+  theme(legend.position="none") +
+  ggtitle("Correlation plot") +
+  theme(axis.text.x = element_text(angle = 90))
+ggsave("correlation.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+#### Recoding response variable for Logistic Regression
+
+```{r, echo=FALSE, warning=FALSE}
+heart_data_new$heart_disease_binary <- ifelse(heart_data_new$heart_disease == "Yes", 1, 0)
+
+heart_data_new$fasting_bs_binary <- ifelse(heart_data_new$fasting_blood_sugar == ">120mg/dL" , 1, 0 )
+
+heart_data_new$sex_binary <- ifelse(heart_data_new$sex == "Male" , 1, 0 )
+
+```
+
+**Function for Adjusted R-square**
+
+```{r, echo=FALSE, warning=FALSE}
+adjusted_r_squared <- function(model) {
+  # Get the summary of the model
+  summary_model <- summary(model)
+  
+  # Calculate the number of predictors
+  num_predictors <- length(coef(model)) - 1
+  
+  # Calculate the adjusted R-squared
+  n <- length(model$model[,1])
+  r_squared <- summary_model$null.deviance - summary_model$deviance
+  adjusted_r_squared <- 1 - (r_squared / (n - num_predictors - 1))
+  
+  print("Adjusted R-Squared")
+  return(adjusted_r_squared)
+}
+
+```
+
+### Hypothesis 1.1
+
+**Fasting Blood Sugar and Heart Disease**
+
+```{r, echo=FALSE, warning=FALSE}
+disease_fbs <- glm(heart_disease_binary ~ fasting_bs_binary, data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_fbs)
+adjusted_r_squared(disease_fbs)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+xrange_fbs <- c(0, 1)
+# Predict probabilities and confidence intervals
+pred_fbs <- predict(disease_fbs,
+                        newdata = data.frame(fasting_bs_binary = xrange_fbs),
+                        se.fit = TRUE,
+                        type = "link")
+  
+# Calculate confidence intervals
+se.fit <- pred_fbs$se.fit
+fit <- pred_fbs$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+  
+# Create a dataframe with prediction results
+pred_fbs_df <- data.frame(fasting_bs_binary = xrange_fbs, lwr, upr, prob)
+  
+# Plot the results
+ggplot(pred_fbs_df, aes(x = fasting_bs_binary, y = prob)) +
+   geom_bar(stat = "identity", fill = "blue", width = 0.5) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.2, color = "black")+
+  # geom_point(
+  #   data = heart_data_new,
+  #   aes(x = fasting_bs_binary, y = heart_disease_binary),
+  #   alpha = 0.07,
+  #   size = 10
+  # ) +
+    labs(
+      x = "Fasting Blood Sugar",
+      y = "Probability of Heart Disease"
+    ) +
+    theme_bw()
+
+```
+
+-   The intercept suggests a log-odds of 0.2022 for heart disease when fasting blood sugar is zero. But this is not statistically significant at 0.05 level(p=0.106)
+-   For each unit increase in fasting blood sugar (from absence to presence), the log-odds of heart disease decrease by 0.1578. However, this decrease is not statistically significant at the 0.05 level (p = 0.626).
+
+**With age and sex as control variables**
+
+```{r, echo=FALSE, warning=FALSE}
+
+disease_fbs1 <- glm(heart_disease_binary ~ fasting_bs_binary  + age  + sex_binary, data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_fbs1)
+adjusted_r_squared(disease_fbs1)
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+median_age <- median(heart_data_new$age)
+
+# Predict probabilities and confidence intervals
+pred_fbs_control <- predict(disease_fbs1,
+                      newdata = expand.grid(fasting_bs_binary = xrange_fbs,
+                                           age = median_age,
+                                           sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_fbs_control$se.fit
+fit <- pred_fbs_control$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_fbs_control_df <- data.frame(fasting_bs_binary = xrange_fbs,
+                            sex_binary = 1,
+                            age = median_age,
+                            lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_fbs_control_df, aes(x = fasting_bs_binary, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+   geom_point(
+    data = heart_data_new,
+    aes(x = fasting_bs_binary, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Fasting Blood Sugar Binary[Age fixed at Median, Sex:Male]",
+    y = "Probability of Heart Disease",
+  ) +
+  theme_bw()
+
+
+```
+
+-   The intercept suggests a log-odds of 4.91168 for heart disease when all predictors are zero. This is satistically significant at 0.05 level(p=5.09e-08)
+-   For each unit increase in fasting blood sugar (from absence to presence), the log-odds of heart disease increase by 0.10818 However, this increase is not statistically significant at the 0.05 level (p = 0.756). when age and sex are fixed.
+-   For each unit increase in age, the log odds of heart disease decrease by 0.06704. This decrease is statistically significant at 0.05 level(p=7.22e-06)
+-   For male, the log-odds of heart disease decrease by 1.54303 and is statistically significant at 0.05 level(p=1.48e-07).
+
+### Hypothesis 1.2
+
+**Cholestrol and Heart Disease**s
+
+```{r, echo=FALSE, warning=FALSE}
+disease_chol <- glm(heart_disease_binary ~ cholestrol, data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_chol)
+adjusted_r_squared(disease_chol)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+xrange_chol <-seq(min(heart_data_new$cholestrol), 
+                   max(heart_data_new$cholestrol), length.out = 100)
+# Predict probabilities and confidence intervals
+pred_chol <- predict(disease_chol, 
+                      newdata = data.frame(cholestrol = xrange_chol),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_chol$se.fit
+fit <- pred_chol$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_chol_df <- data.frame(cholestrol = xrange_chol,
+                             lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_chol_df, aes(x = cholestrol, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  labs(
+    x = "Cholesterol",
+    y = "Probability of Heart Disease"
+  ) +
+  theme_bw()
+
+
+```
+
+-   The intercept suggests a log-odds of 1.001 for heart disease when cholestrol is zero. But this is not statistically significant at 0.05 level(p=0.07)
+-   For each unit increase in cholestrol level, the log-odds of heart disease decrease by 0.003338 However, this decrease is not statistically significant at the 0.05 level (p = 0.1412).
+
+**With age and sex as control variables**
+
+```{r, echo=FALSE, warning=FALSE}
+
+disease_chol1 <- glm(heart_disease_binary ~ cholestrol  + age  + sex_binary , data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_chol1)
+adjusted_r_squared(disease_chol1)
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+# Predict probabilities and confidence intervals
+pred_chol_control <- predict(disease_chol1,
+                      newdata = expand.grid(cholestrol = xrange_chol,
+                                            age = median_age,
+                                            sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "response")
+
+# Calculate confidence intervals
+se.fit <- pred_chol_control$se.fit
+fit <- pred_chol_control$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_chol_control_df <- data.frame(cholestrol = xrange_chol,  
+                            age= median_age,
+                            sex_binary = 1,
+                            lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_chol_control_df, aes(cholestrol, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = cholestrol, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Cholestrol",
+    y = "Probability of Heart Disease")+
+  theme_bw()
+
+```
+
+-   The intercept suggests a log-odds of 5.97656 for heart disease when all predictor variables are zero. This is statistically significant at 0.05(p=4.68e-08)
+-   For each unit increase in cholestrol, the log-odds of heart disease decrease by 0.00478 and this is moderately statistically significant at the 0.05 level (p = 0.0598), when age is fixed at median(55) and sex is Male.
+-   For each unit increase in age, the log odds of heart disease decrease by 0.06294. This decrease is statistically significant at 0.05 level(p=3.12e-05)
+-   For male, the log-odds of heart disease decrease by 1.66836 and is statistically significant at 0.05 level(p=5.22e-08).
+
+### Hypothesis 1.3
+
+**Resting BP and Heart Disease**
+
+```{r, echo=FALSE, warning=FALSE}
+disease_hbp <- glm(heart_disease_binary ~ resting_BP, data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_hbp)
+adjusted_r_squared(disease_hbp)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+xrange_resting_BP <- seq(min(heart_data_new$resting_BP),
+                         max(heart_data_new$resting_BP), length.out = 100)
+# Predict probabilities and confidence intervals
+pred_hbp <- predict(disease_hbp, 
+                      newdata = data.frame(resting_BP = xrange_resting_BP),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_hbp$se.fit
+fit <- pred_hbp$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_hbp_df <- data.frame(resting_BP = xrange_resting_BP,
+                            lwr, upr, prob)                    
+
+# Plot the results
+ggplot(pred_hbp_df, aes(x = resting_BP, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+   geom_point(
+    data = heart_data_new,
+    aes(x = resting_BP, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Resting Blood Pressure",
+    y = "Probability of Heart Disease"
+  ) +
+  theme_bw()
+
+```
+
+-   The intercept suggests a log-odds of 2.409327 for heart disease when resting BP is zero. This is statistically significant at 0.05 level(p=0.0077)
+-   For each unit increase in resting_BP, the log-odds of heart disease decrease by 0.016929 and this decrease is statistically significant at 0.05 level(p=0.0128).
+
+**With age and sex as control variables**
+
+```{r, echo=FALSE, warning=FALSE}
+disease_hbp1 <- glm(heart_disease_binary ~ resting_BP + age + sex_binary, data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_hbp1)
+adjusted_r_squared(disease_hbp1)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# Set up a range of values for cholesterol
+xrange_resting_BP <- seq(min(heart_data_new$resting_BP),max(heart_data_new$resting_BP), length.out = 100)
+
+# Predict probabilities and confidence intervals
+pred_restBP_control <- predict(disease_hbp1,
+                      newdata = expand.grid(resting_BP = xrange_resting_BP,
+                      age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_restBP_control$se.fit
+fit <- pred_restBP_control$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_restBP_control_df <- data.frame(resting_BP = xrange_resting_BP,  
+                            age= median_age,
+                            sex_binary = 1,
+                            lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_restBP_control_df, aes(resting_BP, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = resting_BP, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Resting Blood Pressure[Age fixed at Median, Sex: Male]",
+    y = "Probability of Heart Disease")+
+  theme_bw()+
+  scale_x_continuous(limits = c(min(pred_restBP_control_df$resting_BP), max(pred_restBP_control_df$resting_BP)))
+
+```
+
+-   The intercept suggests a log-odds of 6.393482 for heart disease when all predictor variables are zero. This is statistically significant at 0.05(p=2.61e-07)
+-   For each unit increase in resting BP, the log-odds of heart disease decrease by 0.013709 and this is moderately statistically significant at the 0.05 level (p = 0.068 ), when age is fixed at median(55) and sex is Male.
+-   For each unit increase in age, the log odds of heart disease decrease by 0.060247. This decrease is statistically significant at 0.05 level(p=7.64e-05)
+-   For male, the log-odds of heart disease decrease by 1.582238 and is statistically significant at 0.05 level(p=1.04e-07).
+
+### Hypothesis 2
+
+**Maximum Heart rate and Heart Disease**
+
+```{r, echo=FALSE, warning=FALSE}
+disease_heartRate <- glm(heart_disease_binary ~ max_heart_rate , data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_heartRate)
+adjusted_r_squared(disease_heartRate)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+xrange_max_hr <- seq(min(heart_data_new$max_heart_rate),
+                     max(heart_data_new$max_heart_rate), length.out = 100)
+
+# Predict probabilities and confidence intervals
+pred_heartrate <- predict(disease_heartRate, 
+                      newdata =  data.frame(max_heart_rate = xrange_max_hr),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_heartrate$se.fit
+fit <- pred_heartrate$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_heartrate_df <- data.frame(max_heart_rate = xrange_max_hr,
+                             lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_heartrate_df, aes(x = max_heart_rate, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+   geom_point(
+    data = heart_data_new,
+    aes(x = max_heart_rate, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Maximum Heart Rate Achieved During Exercise",
+    y = "Probability of Heart Disease"
+  ) +
+  theme_bw()
+```
+
+-   The intercept suggests a log-odds of 6.391452 decrease in heart disease when maximum heart rate is zero. This is statistically significant at 0.05 level(p=9.50e-11)
+-   For each unit increase in max_heart_rate, the log-odds of heart disease increase by 0.043951 and this increase is statistically significant at 0.05 level(p=1.71e-11).
+
+**With age and sex as control variables**
+
+```{r, echo=FALSE, warning=FALSE}
+
+disease_heartRate1 <- glm(heart_disease_binary ~ max_heart_rate + age + sex_binary , data = heart_data_new, family = binomial(link = "logit"))
+
+summary(disease_heartRate1)
+adjusted_r_squared(disease_heartRate1)
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# Predict probabilities and confidence intervals
+pred_hr_control <- predict(disease_heartRate1, 
+                      newdata = data.frame(max_heart_rate = xrange_max_hr,
+                      age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_hr_control$se.fit
+fit <- pred_hr_control$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_hr_control_df <- data.frame(max_heart_rate = xrange_max_hr,
+                            age = median_age,
+                            sex_binary = 1,
+                             lwr, upr, prob)
+
+# Plot the results
+ggplot(pred_hr_control_df, aes(x = max_heart_rate, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+   geom_point(
+    data = heart_data_new,
+    aes(x = max_heart_rate, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 10
+  ) +
+  labs(
+    x = "Maximum Heart Rate Achieved During Exercise",
+    y = "Probability of Heart Disease"
+  ) +
+  theme_bw()
+
+ggsave("max_heartrate_model.png", device="png", width=8, height=8, units="in",dpi=300)
+
+```
+
+-   The intercept suggests a log-odds of 3.187349 decrease in heart disease when all predictor variables are zero. This is statistically significant at 0.05(p=0.0486)
+-   For each unit increase in max_heart_rate, the log-odds of heart disease increase by 0.041393 and this is statistically significant at 0.05 level (p=6.57e-09),when age is fixed at median(55) and sex is Male.
+-   For each unit increase in age, the log odds of heart disease decrease by 0.031774 This decrease is statistically significant at 0.05 level(p=0.0537)
+-   For male, the log-odds of heart disease decrease by 1.545892 and is statistically significant at 0.05 level(p=7.20e-07).
+
+### Full Model
+
+```{r, echo=FALSE, warning=FALSE}
+complete_model1 <- glm(heart_disease_binary ~ max_heart_rate +fasting_bs_binary+cholestrol+ resting_BP,data = heart_data_new, family = binomial(link = "logit"))
+
+summary(complete_model1)
+adjusted_r_squared(complete_model1)
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#max_heart_rate
+pred_maxheart <- predict(complete_model1, 
+                      newdata = data.frame(max_heart_rate = xrange_max_hr,
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_maxheart$se.fit
+fit <- pred_maxheart$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_maxheart_df <- data.frame(max_heart_rate = xrange_max_hr,
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                             lwr, upr, prob)
+
+complete_maxHR<- ggplot(pred_maxheart_df, aes(x = max_heart_rate, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = max_heart_rate, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Maximum Heart Rate",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#fasting blood sugar
+pred_fbs <- predict(complete_model1, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = xrange_fbs),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_fbs$se.fit
+fit <- pred_fbs$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_fbs_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = xrange_fbs,
+                             lwr, upr, prob)
+
+complete_fbs<- ggplot(pred_fbs_df, aes(x = fasting_bs_binary, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = fasting_bs_binary, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Fasting Blood Sugar",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#Blood Pressure
+pred_bp <- predict(complete_model1, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = xrange_resting_BP,
+                                           fasting_bs_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_bp$se.fit
+fit <- pred_bp$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_bp_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = xrange_resting_BP,
+                                           fasting_bs_binary = 1,
+                             lwr, upr, prob)
+
+complete_BP<- ggplot(pred_bp_df, aes(x = resting_BP, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = resting_BP, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Resting Blood Pressure",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#Cholestrol
+pred_chol <- predict(complete_model1, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = xrange_chol,
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_chol$se.fit
+fit <- pred_chol$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_chol_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = xrange_chol,
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                             lwr, upr, prob)
+
+complete_chol<- ggplot(pred_chol_df, aes(x = cholestrol, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = cholestrol, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Cholestrol Levels",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+# Arrange the ggplot objects in a grid with different colors
+arranged = grid.arrange(complete_maxHR + scale_fill_brewer(palette = "Set2"),
+             complete_fbs + scale_fill_brewer(palette = "Pastel1"),
+             complete_BP + scale_fill_brewer(palette = "Set3"),
+             complete_chol + scale_fill_brewer(palette = "Accent"),
+             ncol = 2)
+```
+
+-   The intercept suggests a log-odds of 3.511718 decrease in heart disease when all predictor variables are zero. This is statistically significant at 0.05 level(p=0.0146)
+-   For each unit increase in max_heart_rate, the log-odds of heart disease increase by 0.044416 and this increase is statistically significant at 0.05 level(p=2.19e-11).
+-   For each unit increase in fasting blood sugar, the log-odds of heart disease decrease by 0.029925 and this is not statistically significant at 0.05 level(p=0.9346)
+-   For each unit increase in cholestrol, the log-odds of heart disease decrease by 0.003228 and this is not statistically significant at 0.05 level(p=0.1853)
+-   For each unit increase in resting BP, the log-odds of heart disease decrease by 0.016284 and this decrease is statistically significant at 0.05 level(p=0.0326 )
+
+**Complete model with Age & Sex as control variables**
+
+```{r, echo=FALSE, warning=FALSE}
+complete_model <- glm(heart_disease_binary ~ max_heart_rate +fasting_bs_binary+cholestrol+ resting_BP+age + sex_binary ,data = heart_data_new, family = binomial(link = "logit"))
+
+summary(complete_model)
+adjusted_r_squared(complete_model)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+#max_heart_rate
+pred_maxheart2 <- predict(complete_model, 
+                      newdata = data.frame(max_heart_rate = xrange_max_hr,
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                                           age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_maxheart2$se.fit
+fit <- pred_maxheart2$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_maxheart2_df <- data.frame(max_heart_rate = xrange_max_hr,
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                                 age = median_age,
+                                sex_binary = 1,
+                             lwr, upr, prob)
+                    
+complete_maxHR<- ggplot(pred_maxheart2_df, aes(x = max_heart_rate, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = max_heart_rate, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Maximum Heart Rate",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#fasting blood sugar
+pred_fbs2 <- predict(complete_model, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = xrange_fbs,
+                                           age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_fbs2$se.fit
+fit <- pred_fbs2$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_fbs2_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = xrange_fbs,
+                                 age = median_age,
+                                sex_binary = 1,
+                             lwr, upr, prob)
+
+complete_fbs<- ggplot(pred_fbs2_df, aes(x = fasting_bs_binary, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = fasting_bs_binary, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Fasting Blood Sugar",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#blood pressure
+pred_bp2 <- predict(complete_model, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = xrange_resting_BP,
+                                           fasting_bs_binary = 1,
+                                           age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_bp2$se.fit
+fit <- pred_bp2$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_bp2_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = median(xrange_chol),
+                                           resting_BP = xrange_resting_BP,
+                                           fasting_bs_binary = 1,
+                                 age = median_age,
+                                sex_binary = 1,
+                             lwr, upr, prob)
+
+complete_BP<- ggplot(pred_bp2_df, aes(x = resting_BP, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = resting_BP, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Resting Blood Pressure",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#cholestrol
+pred_chol2 <- predict(complete_model, 
+                      newdata = data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = xrange_chol,
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                                           age = median_age,
+                      sex_binary = 1),
+                      se.fit = TRUE,
+                      type = "link")
+
+# Calculate confidence intervals
+se.fit <- pred_chol2$se.fit
+fit <- pred_chol2$fit
+lwr <- plogis(fit + qnorm(0.025) * se.fit)  # Lower bound for 95% C.I.
+upr <- plogis(fit + qnorm(0.975) * se.fit)  # Upper bound for 95% C.I.
+prob <- plogis(fit)  # Probability from the model
+
+# Create a dataframe with prediction results
+pred_chol2_df <- data.frame(max_heart_rate = median(xrange_max_hr),
+                                           cholestrol = xrange_chol,
+                                           resting_BP = median(xrange_resting_BP),
+                                           fasting_bs_binary = 1,
+                                 age = median_age,
+                                sex_binary = 1,
+                             lwr, upr, prob)
+
+complete_chol<- ggplot(pred_chol2_df, aes(x = cholestrol, y = prob)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_point(
+    data = heart_data_new,
+    aes(x = cholestrol, y = heart_disease_binary),
+    alpha = 0.07,
+    size = 1
+  ) +
+  labs(
+    x = "Cholestrol Levels",
+    y = "Heart Disease"
+  ) +
+  theme_bw()
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+# Arrange the ggplot objects in a grid with different colors
+arranged = grid.arrange(complete_maxHR + scale_fill_brewer(palette = "Set2"),
+             complete_fbs + scale_fill_brewer(palette = "Pastel1"),
+             complete_BP + scale_fill_brewer(palette = "Set3"),
+             complete_chol + scale_fill_brewer(palette = "Accent"),
+             ncol = 2)
+
+ggsave("complete_model.png",plot = arranged, device="png", width=8, height=8, units="in",dpi=300)
+
+
+```
+
+-   The intercept suggests a log-odds of 0.293415 decrease in heart disease when all predictor variables are zero. This is not statistically significant at 0.05 level(p=0.8734)
+-   For each unit increase in max_heart_rate, the log-odds of heart disease increase by 0.046941 and this increase is statistically significant at 0.05 level(p=1.12e-09), when age and sex are fixed
+-   For each unit increase in fasting blood sugar, the log-odds of heart disease increase by 0.107264 and this is not statistically significant at 0.05 level(p=0.7759), when age and sex are fixed
+-   For each unit increase in cholestrol, the log-odds of heart disease decrease by 0.007085 and this decrease is statistically significant at 0.05 level(p=0.0104), when age and sex are fixed
+-   For each unit increase in resting BP, the log-odds of heart disease decrease by 0.020430 and this decrease is statistically significant at 0.05 level(p=0.0155), when age and sex are fixed
+-   For each unit increase in age, the log-odds of heart disease decrease by 0.014864 and this decrease is not statistically significant at 0.05 level(p=0.3996)
+-   For male, the log-odds of heart disease decrease by 1.864455 and this decrease is statistically significant at 0.05 level(p=5.64e-08)
+
+## Selecting a model by comparing
+
+We have three predictor variables for research question 1, let's try different logistic models. Then compare AIC and Adjusted R-squared scores for each model.
+
+Complete model including age and sex as control variables has lower AIC and Adjusted R-squared of 0.6586
+
+```{r, echo=FALSE, warning=FALSE}
+AIC(disease_fbs,disease_fbs1,disease_chol,disease_chol1,disease_hbp,disease_hbp1, disease_heartRate,disease_heartRate1, complete_model,complete_model1)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+adjusted_r_squared(complete_model)
+```
+
+Adjusted R-squared of 0.6586 indicates that approximately 65.86% of the variability in the heart disease is explained by the independent variables in your model. As this is complete model it has Fasting Blood sugar, Resting Blood Pressure, Maximum Heart Rate, Cholestrol controlling for age and sex.
+
+## Stargazer Output
+
+I've generated a stargazer output for complete model without control variables to compare the best-fit finalized models, which is complete model with control variables. This allows us to assess the association strength between the response variable (heart disease) and all predictors in both research questions.
+
+```{r, echo=FALSE, warning=FALSE}
+stargazer(complete_model1,complete_model,type="text")
+```
+
+## Diagnostics
+
+### Complete Model
+
+**Linearity**
+
+The smoothed scatter plots show that variables age, max_heart_rate, sex and fasting_bp are all quite linearly associated with the heart disease outcome in logit scale. Whereas, cholestrol and resting_bp are not linear and might need some transformation
+
+**Influential Values**
+
+Influential values are extreme individual data points that can alter the quality of the logistic regression model. By plotting Cook's distance, we can check if there are any influential values in the model. Here I removed these influential values by filtering out potential outliers found.
+
+**Multicollinearity**
+
+A VIF value that exceeds 5 or 10 indicates a problematic amount of collinearity. In our case, there is no collinearity: all variables have a value of VIF well below 5.
+
+```{r, echo=FALSE, warning=FALSE}
+
+probabilities <- predict(complete_model, type = "response")
+
+# select columns by name
+selected_columns <- c("max_heart_rate", "cholestrol", "resting_BP","fasting_bs_binary", "age", "sex_binary")
+
+# Select only the specified columns from the data frame
+diagnostic_data <- heart_data_new |>
+  dplyr::select(all_of(c("max_heart_rate", "cholestrol", "resting_BP","fasting_bs_binary", "age", "sex_binary")))
+
+predictors <- colnames(diagnostic_data)
+# Bind the logit and tidying the data for plot
+diagnostic_data <- diagnostic_data %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+#Linearity
+
+ggplot(diagnostic_data, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+
+ggsave("diagnostics.png", device="png", width=8, height=8, units="in",dpi=300)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+plot(complete_model, which = 4, id.n = 3)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# Extract model results
+complete_model.data <- augment(complete_model) %>% 
+  mutate(index = 1:n())
+
+complete_model.data %>% top_n(3, .cooksd)
+```
+
+**Plot the standarized result**
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(complete_model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = heart_disease_binary), alpha = .5) +
+  theme_bw()
+```
+
+**Filter potential influential data points with abs(.std.res) \> 3:**
+
+```{r, echo=FALSE, warning=FALSE}
+complete_model.data %>% 
+  filter(abs(.std.resid) > 3)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+car::vif(complete_model)
+```
+
+## Conclusion
+
+Maximum heart rate during exercise and age show a significant association with increased heart disease risk, regardless of sex. This underscores the importance of considering both physiological and demographic factors in assessing heart disease risk. Contrary to common assumptions, males exhibit a lower risk of heart disease compared to females. This challenges traditional gender-based perceptions of heart disease risk and highlights the need for nuanced understanding beyond generalizations. Fasting blood sugar levels above 120mg/dL, cholesterol levels, and resting blood pressure do not significantly predict heart disease risk. While these factors are often considered in cardiovascular health assessments, their absence of significant association suggests the need for further exploration or consideration of additional variables.
+
+In conclusion, our study sheds light on the various factors contributing to heart disease risk. We've identified important predictors and questioned common beliefs, emphasizing the need for thorough risk assessment methods. These findings have important implications for preventing heart disease and tailoring health strategies to individuals.
+
+## Future Scope
+
+Future research could delve deeper into the interplay between these predictors and explore additional variables that may contribute to heart disease risk.
+
+## References:
+
+-   D'Agostino, R. B., Vasan, R. S., Pencina, M. J., et al. (2008). General cardiovascular risk profile for use in primary care: the Framingham Heart Study. Circulation, 117(6), 743-753.
+-   Lloyd-Jones, D. M., Leip, E. P., Larson, M. G., et al. (2006). Prediction of lifetime risk for cardiovascular disease by risk factor burden at 50 years of age. Circulation, 113(6), 791-798.
+-   Yusuf, S., Hawken, S., Ounpuu, S., et al. (2004). Effect of potentially modifiable risk factors associated with myocardial infarction in 52 countries (the INTERHEART study): case-control study. The Lancet, 364(9438), 937-952.
+-   Hemingway, H., & Marmot, M. (1999). Evidence-based cardiology: psychosocial factors in the aetiology and prognosis of coronary heart disease: systematic review of prospective cohort studies. BMJ, 318(7196), 1460-1467.
+-   Gupta, D. K., Wang, T. J., Claggett, B., et al. (2020). Association of plasma biomarkers of cardiovascular risk with maximum heart rate achieved: a population-based study. JAMA Cardiology, 5(9), 1008-1017.
